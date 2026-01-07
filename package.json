@@ -1,0 +1,27 @@
+{
+  "name": "AIServicesProject",
+  "version": "1.0.0",
+  "description": "A simple CAP project.",
+  "dependencies": {
+    "@cap-js/hana": "^2",
+    "@sap/cds": "^9",
+    "@sap/xsenv": "^6.0.0",
+    "axios": "^1.13.2",
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "form-data": "^4.0.5",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2"
+  },
+  "scripts": {
+    "start": "node srv/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "18.x" 
+  },
+  "private": true,
+  "cds": {}
+}

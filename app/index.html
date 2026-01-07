@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Servicios de IA de SAP</title>
+
+    <script id="sap-ui-bootstrap"
+        src="https://sdk.openui5.org/resources/sap-ui-core.js"
+        data-sap-ui-libs="sap.m, sap.ui.layout, sap.ui.unified, sap.ui.table"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-async="true"
+        data-sap-ui-compatversion="edge"
+        data-sap-ui-resourceroots='{ "demo": "./" }'>
+    </script>
+
+    <style>
+        .sapUiBody { background: #f5f7fa; }
+        .myPdfViewer { min-height: 600px !important; height: 600px !important; width: 100% !important; border: 1px solid #ccc; }
+        .preview-img { border: 1px solid #ccc; border-radius: 4px; max-height: 600px; object-fit: contain; }
+    </style>
+
+    <script>
+        sap.ui.getCore().attachInit(function () {
+            
+            // --- DATOS MAESTROS DE IDIOMAS (Tu lista JSON) ---
+            const MASTER_LANGUAGES = [
+                { key: "ar-SA", name: "Arabic", to: ["en-US"] },
+                { key: "bg-BG", name: "Bulgarian", to: ["en-US"] },
+                { key: "ca-ES", name: "Catalan", to: ["en-US"] },
+                { key: "cs-CZ", name: "Czech", to: ["en-US"] },
+                { key: "da-DK", name: "Danish", to: ["en-US"] },
+                { key: "de-DE", name: "German", to: ["bg-BG","cs-CZ","en-US","es-ES","fr-FR","hr-HR","hu-HU","it-IT","pl-PL","ro-RO","ru-RU","sk-SK","sl-SI","sr-Latn-RS","zh-CN"] },
+                { key: "el-GR", name: "Greek", to: ["en-US"] },
+                { key: "en-US", name: "English", to: ["ar-SA","bg-BG","ca-ES","cs-CZ","da-DK","de-DE","el-GR","es-ES","et-EE","fi-FI","fr-FR","he-IL","hi-IN","hr-HR","hu-HU","id-ID","it-IT","ja-JP","kk-KZ","ko-KR","lt-LT","lv-LV","ms-MY","nb-NO","nl-NL","pl-PL","pt-BR","ro-RO","ru-RU","sk-SK","sl-SI","sr-Latn-RS","sv-SE","th-TH","tr-TR","uk-UA","vi-VN","zh-CN","zh-TW"] },
+                { key: "es-ES", name: "Spanish (Spain)", to: ["en-US"] },
+                { key: "et-EE", name: "Estonian", to: ["en-US"] },
+                { key: "fi-FI", name: "Finnish", to: ["en-US"] },
+                { key: "fr-FR", name: "French", to: ["en-US"] },
+                { key: "he-IL", name: "Hebrew", to: ["en-US"] },
+                { key: "hi-IN", name: "Hindi", to: ["en-US"] },
+                { key: "hr-HR", name: "Croatian", to: ["en-US"] },
+                { key: "hu-HU", name: "Hungarian", to: ["en-US"] },
+                { key: "id-ID", name: "Indonesian", to: ["en-US"] },
+                { key: "it-IT", name: "Italian", to: ["en-US"] },
+                { key: "ja-JP", name: "Japanese", to: ["en-US"] },
+                { key: "kk-KZ", name: "Kazakh", to: ["en-US"] },
+                { key: "ko-KR", name: "Korean", to: ["en-US"] },
+                { key: "lt-LT", name: "Lithuanian", to: ["en-US"] },
+                { key: "lv-LV", name: "Latvian", to: ["en-US"] },
+                { key: "ms-MY", name: "Malay", to: ["en-US"] },
+                { key: "nb-NO", name: "Norwegian", to: ["en-US"] },
+                { key: "nl-NL", name: "Dutch", to: ["en-US"] },
+                { key: "pl-PL", name: "Polish", to: ["en-US"] },
+                { key: "pt-BR", name: "Portuguese (Brazilian)", to: ["en-US"] },
+                { key: "ro-RO", name: "Romanian", to: ["en-US"] },
+                { key: "ru-RU", name: "Russian", to: ["en-US"] },
+                { key: "sk-SK", name: "Slovak", to: ["en-US"] },
+                { key: "sl-SI", name: "Slovenian", to: ["en-US"] },
+                { key: "sr-Latn-RS", name: "Serbian (Latin)", to: ["en-US"] },
+                { key: "sv-SE", name: "Swedish", to: ["en-US"] },
+                { key: "th-TH", name: "Thai", to: ["en-US"] },
+                { key: "tr-TR", name: "Turkish", to: ["en-US"] },
+                { key: "uk-UA", name: "Ukrainian", to: ["en-US"] },
+                { key: "vi-VN", name: "Vietnamese", to: ["en-US"] },
+                { key: "zh-CN", name: "Chinese (Simplified)", to: ["en-US"] },
+                { key: "zh-TW", name: "Chinese (Traditional)", to: ["en-US"] }
+            ];
+
+            // --- 1. MODELO ---
+            const oModel = new sap.ui.model.json.JSONModel({
+                ui: { hasFile: false, previewUrl: null, isPdf: false, isImage: false },
+                fileObject: null,
+                raw: "",
+                
+                // Listas dinámicas
+                sourceLanguages: MASTER_LANGUAGES, // Todos pueden ser origen
+                targetLanguages: [],               // Se llena según selección
+                
+                selectedSource: "en-US", // Default inicial
+                selectedTarget: "es-ES",
+                
+                // TABLA: FORMATOS TRANSLATION
+                transFormats: [
+                    { ext: ".txt", mime: "text/plain", desc: "Texto (UTF-8)" },
+                    { ext: ".html; .htm", mime: "text/html", desc: "HTML (UTF-8)" },
+                    { ext: ".xlf; .xliff", mime: "application/x-xliff+xml", desc: "XLIFF 1.2 / 2.0 (UTF-8)" },
+                    { ext: ".docx", mime: "application/...wordprocessingml.document", desc: "Word" },
+                    { ext: ".docm", mime: "application/...word.document.macroenabled.12", desc: "Word (Macros)" },
+                    { ext: ".pdf", mime: "application/pdf", desc: "Adobe PDF (Se devuelve como .docx)" },
+                    { ext: ".srt", mime: "text/srt", desc: "Subtítulo SubRip (UTF-8)" },
+                    { ext: ".vtt", mime: "text/vtt", desc: "WebVTT (UTF-8)" }
+                ],
+
+                // LISTA: FORMATOS DOCUMENT AI
+                aiFormats: [
+                    { type: "Documentos de una página", formats: "JPEG, PNG, TIFF" },
+                    { type: "Texto de escena (Scene text)", formats: "JPEG, PNG, TIFF" },
+                    { type: "Facturas Electrónicas (E-invoice)", formats: "PDF, XML Híbrido, Factur-X, ZUGFeRD (v2.3)" },
+                    { type: "Avisos de Pago (Payment Advice)", formats: "XLS, XLSX (Primeras 1000 filas / 10 columnas)" },
+                    { type: "Documentos PDF estándar", formats: "PDF (Digital o Escaneado)" }
+                ]
+            });
+            sap.ui.getCore().setModel(oModel);
+
+            // --- 2. INICIALIZACIÓN DE LÓGICA DE IDIOMAS ---
+            // Llamamos a esta función al inicio para llenar el combo de destino basado en el default (en-US)
+            updateTargetLanguages("en-US");
+
+
+            // --- 3. COMPONENTES UI ---
+
+            // Uploader
+            const oFileUploader = new sap.ui.unified.FileUploader("myUploader", {
+                width: "100%", placeholder: "Cargar archivo...",
+                fileType: ["pdf", "jpg", "png", "docx", "xlsx", "pptx", "txt", "html"], 
+                buttonText: "Examinar", style: "Emphasized", icon: "sap-icon://upload",
+                change: onFileChange 
+            });
+
+            // Visores
+            const oImagePreview = new sap.m.Image({ 
+                src: "{/ui/previewUrl}", width: "100%", visible: "{/ui/isImage}" 
+            }).addStyleClass("preview-img sapUiSmallMarginTop");
+
+            const oPdfPreview = new sap.m.PDFViewer({ 
+                source: "{/ui/previewUrl}", height: "600px", width: "100%", displayType: "Embedded",
+                visible: "{/ui/isPdf}", showDownloadButton: false
+            }).addStyleClass("myPdfViewer sapUiSmallMarginTop");
+
+            // SECCIÓN 1: AI
+            const oExtractBtn = new sap.m.Button({
+                text: "Extraer Datos (JSON)", icon: "sap-icon://search", type: "Emphasized", 
+                width: "100%", enabled: "{/ui/hasFile}", press: onExtractData
+            });
+            const oJsonArea = new sap.m.TextArea({ 
+                value: "{/raw}", rows: 10, width: "100%", editable: false, placeholder: "JSON..." 
+            });
+
+            const oPanelAI = new sap.m.Panel({
+                headerText: "1. Visualización y Extracción",
+                content: [
+                    new sap.ui.layout.Grid({ defaultSpan: "L6 M6 S12", content: [
+                        new sap.m.VBox({ items: [ 
+                            new sap.m.Label({text:"Documento:", design:"Bold"}), oFileUploader, oImagePreview, oPdfPreview 
+                        ]}),
+                        new sap.m.VBox({ items: [ 
+                            new sap.m.Label({text:"Datos:", design:"Bold"}), oExtractBtn, new sap.m.Title({text:"", class:"sapUiTinyMargin"}), oJsonArea 
+                        ]})
+                    ]})
+                ]
+            });
+
+            // SECCIÓN 2: TRADUCCIÓN
+
+            // Combo Origen (Dispara evento al cambiar)
+            const oLangSource = new sap.m.ComboBox({
+                width: "100%", placeholder: "Origen",
+                items: { path: "/sourceLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) },
+                selectedKey: "{/selectedSource}",
+                selectionChange: function(oEvent) {
+                    const sKey = oEvent.getParameter("selectedItem").getKey();
+                    updateTargetLanguages(sKey);
+                }
+            });
+
+            // Combo Destino (Sus items dependen de /targetLanguages)
+            const oLangTarget = new sap.m.ComboBox({
+                width: "100%", placeholder: "Destino",
+                items: { path: "/targetLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) },
+                selectedKey: "{/selectedTarget}"
+            });
+
+            const oTranslateBtn = new sap.m.Button({
+                text: "Traducir y Descargar (.docx)", icon: "sap-icon://download", type: "Accept", 
+                width: "100%", enabled: "{/ui/hasFile}", press: onTranslateFile
+            });
+
+            const oPanelTrans = new sap.m.Panel({
+                headerText: "2. Traducción de Documentos (Sandbox)",
+                content: [
+                    new sap.ui.layout.Grid({ defaultSpan: "L6 M6 S12", content: [
+                        new sap.m.VBox({ items: [ 
+                            new sap.m.Label({text:"Configuración:", design:"Bold"}), 
+                            new sap.ui.layout.Grid({ defaultSpan:"L6 M12 S12", content:[
+                                new sap.m.VBox({ items:[ new sap.m.Label({text:"De:"}), oLangSource ] }),
+                                new sap.m.VBox({ items:[ new sap.m.Label({text:"A:"}), oLangTarget ] })
+                            ]})
+                        ]}),
+                        new sap.m.VBox({ justifyContent: "Center", items: [ 
+                            new sap.m.Label({text:"Acción:", design:"Bold"}), new sap.m.Title({text:"", class:"sapUiSmallMargin"}), oTranslateBtn 
+                        ]})
+                    ]})
+                ]
+            });
+
+            // HEADER INFO
+            const oInfoBtn = new sap.m.Button({ icon: "sap-icon://hint", text: "Formatos", press: onOpenInfo });
+
+            // PAGINA
+            const oPage = new sap.m.Page({
+                title: "Uso de Servicios de IA - Document AI y Translation Hub", headerContent: [oInfoBtn],
+                content: [ new sap.m.VBox({ items: [ oPanelAI, new sap.m.Title({text:"", class:"sapUiMediumMargin"}), oPanelTrans ] }).addStyleClass("sapUiMediumMargin") ]
+            });
+            new sap.m.App({ pages: [oPage] }).placeAt("content");
+
+
+            // --- LÓGICA ---
+
+            // Función vital: Filtra los destinos según el origen
+            function updateTargetLanguages(sourceKey) {
+                // 1. Buscar el objeto del idioma origen
+                const sourceObj = MASTER_LANGUAGES.find(l => l.key === sourceKey);
+                
+                if (sourceObj && sourceObj.to) {
+                    // 2. Filtrar MASTER_LANGUAGES para encontrar solo los que están en la lista "to"
+                    const validTargets = MASTER_LANGUAGES.filter(l => sourceObj.to.includes(l.key));
+                    
+                    // 3. Actualizar modelo
+                    oModel.setProperty("/targetLanguages", validTargets);
+                    
+                    // 4. Auto-seleccionar el primero si el actual ya no es válido
+                    const currentTarget = oModel.getProperty("/selectedTarget");
+                    const isValid = validTargets.some(t => t.key === currentTarget);
+                    
+                    if (!isValid && validTargets.length > 0) {
+                        oModel.setProperty("/selectedTarget", validTargets[0].key);
+                        sap.m.MessageToast.show("Destino actualizado automáticamente");
+                    }
+                } else {
+                    oModel.setProperty("/targetLanguages", []);
+                }
+            }
+
+            function onFileChange(e) {
+                const domRef = e.getSource().getDomRef();
+                const file = domRef ? domRef.querySelector('input[type="file"]').files[0] : null;
+                if(file) {
+                    oModel.setProperty("/fileObject", file); oModel.setProperty("/ui/hasFile", true);
+                    oModel.setProperty("/ui/previewUrl", URL.createObjectURL(file));
+                    oModel.setProperty("/ui/isPdf", file.type === "application/pdf");
+                    oModel.setProperty("/ui/isImage", file.type.startsWith("image"));
+                    oModel.setProperty("/raw", "");
+                }
+            }
+
+            function onExtractData() {
+                const file = oModel.getProperty("/fileObject");
+                if(!file) return;
+                const oBusy = new sap.m.BusyDialog({text:"Extrayendo..."}); oBusy.open();
+                const fd = new FormData(); fd.append("file", file);
+                
+                fetch("/uploadInvoice", { method: "POST", body: fd })
+                .then(r => r.json())
+                .then(data => { oModel.setProperty("/raw", JSON.stringify(data, null, 4)); })
+                .catch(e => sap.m.MessageBox.error("Error: " + e))
+                .finally(() => oBusy.close());
+            }
+
+            async function onTranslateFile() {
+                const file = oModel.getProperty("/fileObject");
+                if(!file) return;
+                const src = oModel.getProperty("/selectedSource");
+                const trg = oModel.getProperty("/selectedTarget");
+                
+                if (!src || !trg) { sap.m.MessageToast.show("Seleccione idiomas válidos"); return; }
+
+                const oBusy = new sap.m.BusyDialog({text: "Traduciendo..."}); oBusy.open();
+                const fd = new FormData(); fd.append("file", file); fd.append("sourceLang", src); fd.append("targetLang", trg);
+
+                try {
+                    const response = await fetch("/translateFile", { method: "POST", body: fd });
+                    if (!response.ok) {
+                        const err = await response.json(); throw new Error(err.error || "Error servidor");
+                    }
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.style.display = 'none'; a.href = url;
+                    const nameNoExt = file.name.split('.').slice(0, -1).join('.') || file.name;
+                    a.download = `Traducido_${nameNoExt}.docx`;
+                    document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
+                    sap.m.MessageToast.show("Descarga iniciada");
+                } catch (e) {
+                    sap.m.MessageBox.error("Error Traducción: " + e.message);
+                } finally { oBusy.close(); }
+            }
+
+            // Info Dialog
+            let _oInfoDialog;
+            function onOpenInfo() {
+                if (!_oInfoDialog) {
+                    const oTableTrans = new sap.m.Table({
+                        columns: [ new sap.m.Column({header: new sap.m.Label({text:"Ext"})}), new sap.m.Column({header: new sap.m.Label({text:"Desc"})}) ],
+                        items: { path: "/transFormats", template: new sap.m.ColumnListItem({ cells: [ new sap.m.Text({text:"{ext}"}), new sap.m.Text({text:"{desc}"}) ] }) }
+                    });
+                    const oListAI = new sap.m.List({
+                        items: { path: "/aiFormats", template: new sap.m.StandardListItem({ title: "{type}", description: "{formats}", icon: "sap-icon://document" }) }
+                    });
+                    _oInfoDialog = new sap.m.Dialog({
+                        title: "Formatos", contentWidth: "600px",
+                        content: [ new sap.m.IconTabBar({ items: [
+                            new sap.m.IconTabFilter({ text: "Translation Hub", icon: "sap-icon://translate", content: [oTableTrans] }),
+                            new sap.m.IconTabFilter({ text: "Document AI", icon: "sap-icon://learning-assistant", content: [oListAI] })
+                        ]})],
+                        beginButton: new sap.m.Button({ text: "Cerrar", press: function() { _oInfoDialog.close(); } })
+                    });
+                    sap.ui.getCore().byId("app").addDependent(_oInfoDialog);
+                }
+                _oInfoDialog.open();
+            }
+        });
+    </script>
+</head>
+<body class="sapUiBody" id="content"></body>
+</html>

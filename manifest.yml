@@ -1,0 +1,13 @@
+---
+applications:
+  - name: aiservices-app         # El nombre que tendrá en BTP
+    path: .
+    memory: 256M                 # Memoria asignada
+    buildpack: nodejs_buildpack
+    random-route: true           # Crea una URL única (ej: aiservices-app-random.cfapps...)
+    command: node srv/server.js  # Comando de inicio
+    services:
+      - default_document-information-extraction-trial             # IMPORTANTE: Pon aquí el nombre EXACTO de tu instancia en BTP
+    env:
+      SANDBOX-API-KEY: "NQSRAC0Pg4WzlokOGjvFM5bOozDlcilJ"
+      OPTIMIZE_MEMORY: true
