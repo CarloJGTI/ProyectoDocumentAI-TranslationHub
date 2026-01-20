@@ -7,7 +7,8 @@ applications:
     random-route: true           # Crea una URL única (ej: aiservices-app-random.cfapps...)
     command: node srv/server.js  # Comando de inicio
     services:
-      - default_document-information-extraction-trial             # IMPORTANTE: Pon aquí el nombre EXACTO de tu instancia en BTP
+      - default_sap-document-information-extraction            
+      - default_document-translation
     env:
       SANDBOX-API-KEY: "NQSRAC0Pg4WzlokOGjvFM5bOozDlcilJ"
       OPTIMIZE_MEMORY: true

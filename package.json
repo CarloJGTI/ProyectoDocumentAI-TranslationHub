@@ -4,13 +4,16 @@
   "description": "A simple CAP project.",
   "dependencies": {
     "@cap-js/hana": "^2",
+    "@ilovepdf/ilovepdf-nodejs": "^0.3.1",
     "@sap/cds": "^9",
     "@sap/xsenv": "^6.0.0",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "express": "^4.22.1",
     "form-data": "^4.0.5",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
     "@cap-js/sqlite": "^2"
@@ -20,7 +23,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
-    "node": "18.x" 
+    "node": ">=18.0.0"
   },
   "private": true,
   "cds": {}
