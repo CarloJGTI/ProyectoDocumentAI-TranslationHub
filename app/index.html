@@ -3,90 +3,372 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal SAP BTP - Document AI</title>
-    <script id="sap-ui-bootstrap" src="https://sdk.openui5.org/resources/sap-ui-core.js" data-sap-ui-libs="sap.m, sap.ui.layout, sap.ui.unified, sap.ui.table" data-sap-ui-theme="sap_horizon" data-sap-ui-async="true" data-sap-ui-compatversion="edge" data-sap-ui-resourceroots='{ "demo": "./" }'></script>
-    <style> .sapUiBody { background: #f5f7fa; } .preview-img { max-height: 400px; object-fit: contain; margin-top: 10px; } .pdf-viewer { min-height: 500px !important; height: 500px !important; margin-top: 10px; } </style>
+    <title>Portal SAP BTP - AI Services</title>
+    
+    <script id="sap-ui-bootstrap" 
+            src="https://sdk.openui5.org/resources/sap-ui-core.js" 
+            data-sap-ui-libs="sap.m, sap.ui.layout, sap.ui.unified, sap.ui.table" 
+            data-sap-ui-theme="sap_horizon" 
+            data-sap-ui-async="true" 
+            data-sap-ui-compatversion="edge" 
+            data-sap-ui-resourceroots='{ "demo": "./" }'></script>
+            
+    <style> 
+        .sapUiBody { background: #f5f7fa; } 
+        .preview-img { max-height: 400px; object-fit: contain; margin-top: 10px; border: 1px solid #ddd; padding: 5px; background: white; } 
+        .pdf-viewer { min-height: 500px !important; height: 500px !important; margin-top: 10px; border: 1px solid #ddd; } 
+    </style>
+
     <script>
         sap.ui.getCore().attachInit(function () {
+            
+            // --- 1. DATOS MAESTROS (Idiomas y Formatos) ---
             const MASTER_LANGUAGES = [
-                { key: "ar-SA", name: "Arabic", to: ["en-US"] }, { key: "bg-BG", name: "Bulgarian", to: ["en-US"] }, { key: "ca-ES", name: "Catalan", to: ["en-US"] }, { key: "cs-CZ", name: "Czech", to: ["en-US"] }, { key: "da-DK", name: "Danish", to: ["en-US"] }, { key: "de-DE", name: "German", to: ["bg-BG","cs-CZ","en-US","es-ES","fr-FR","hr-HR","hu-HU","it-IT","pl-PL","ro-RO","ru-RU","sk-SK","sl-SI","sr-Latn-RS","zh-CN"] }, { key: "el-GR", name: "Greek", to: ["en-US"] }, { key: "en-US", name: "English", to: ["ar-SA","bg-BG","ca-ES","cs-CZ","da-DK","de-DE","el-GR","es-ES","et-EE","fi-FI","fr-FR","he-IL","hi-IN","hr-HR","hu-HU","id-ID","it-IT","ja-JP","kk-KZ","ko-KR","lt-LT","lv-LV","ms-MY","nb-NO","nl-NL","pl-PL","pt-BR","ro-RO","ru-RU","sk-SK","sl-SI","sr-Latn-RS","sv-SE","th-TH","tr-TR","uk-UA","vi-VN","zh-CN","zh-TW"] }, { key: "es-ES", name: "Spanish (Spain)", to: ["en-US"] }, { key: "et-EE", name: "Estonian", to: ["en-US"] }, { key: "fi-FI", name: "Finnish", to: ["en-US"] }, { key: "fr-FR", name: "French", to: ["en-US"] }, { key: "he-IL", name: "Hebrew", to: ["en-US"] }, { key: "hi-IN", name: "Hindi", to: ["en-US"] }, { key: "hr-HR", name: "Croatian", to: ["en-US"] }, { key: "hu-HU", name: "Hungarian", to: ["en-US"] }, { key: "id-ID", name: "Indonesian", to: ["en-US"] }, { key: "it-IT", name: "Italian", to: ["en-US"] }, { key: "ja-JP", name: "Japanese", to: ["en-US"] }, { key: "kk-KZ", name: "Kazakh", to: ["en-US"] }, { key: "ko-KR", name: "Korean", to: ["en-US"] }, { key: "lt-LT", name: "Lithuanian", to: ["en-US"] }, { key: "lv-LV", name: "Latvian", to: ["en-US"] }, { key: "ms-MY", name: "Malay", to: ["en-US"] }, { key: "nb-NO", name: "Norwegian", to: ["en-US"] }, { key: "nl-NL", name: "Dutch", to: ["en-US"] }, { key: "pl-PL", name: "Polish", to: ["en-US"] }, { key: "pt-BR", name: "Portuguese (Brazilian)", to: ["en-US"] }, { key: "ro-RO", name: "Romanian", to: ["en-US"] }, { key: "ru-RU", name: "Russian", to: ["en-US"] }, { key: "sk-SK", name: "Slovak", to: ["en-US"] }, { key: "sl-SI", name: "Slovenian", to: ["en-US"] }, { key: "sr-Latn-RS", name: "Serbian (Latin)", to: ["en-US"] }, { key: "sv-SE", name: "Swedish", to: ["en-US"] }, { key: "th-TH", name: "Thai", to: ["en-US"] }, { key: "tr-TR", name: "Turkish", to: ["en-US"] }, { key: "uk-UA", name: "Ukrainian", to: ["en-US"] }, { key: "vi-VN", name: "Vietnamese", to: ["en-US"] }, { key: "zh-CN", name: "Chinese (Simplified)", to: ["en-US"] }, { key: "zh-TW", name: "Chinese (Traditional)", to: ["en-US"] }
+                { key: "ar-SA", name: "Arabic", to: ["en-US"] },
+                { key: "bg-BG", name: "Bulgarian", to: ["en-US"] },
+                { key: "ca-ES", name: "Catalan", to: ["en-US"] },
+                { key: "cs-CZ", name: "Czech", to: ["en-US"] },
+                { key: "da-DK", name: "Danish", to: ["en-US"] },
+                { key: "de-DE", name: "German", to: ["bg-BG","cs-CZ","en-US","es-ES","fr-FR","hr-HR","hu-HU","it-IT","pl-PL","ro-RO","ru-RU","sk-SK","sl-SI","sr-Latn-RS","zh-CN"] },
+                { key: "el-GR", name: "Greek", to: ["en-US"] },
+                { key: "en-US", name: "English", to: ["ar-SA","bg-BG","ca-ES","cs-CZ","da-DK","de-DE","el-GR","es-ES","et-EE","fi-FI","fr-FR","he-IL","hi-IN","hr-HR","hu-HU","id-ID","it-IT","ja-JP","kk-KZ","ko-KR","lt-LT","lv-LV","ms-MY","nb-NO","nl-NL","pl-PL","pt-BR","ro-RO","ru-RU","sk-SK","sl-SI","sr-Latn-RS","sv-SE","th-TH","tr-TR","uk-UA","vi-VN","zh-CN","zh-TW"] },
+                { key: "es-ES", name: "Spanish (Spain)", to: ["en-US"] },
+                { key: "et-EE", name: "Estonian", to: ["en-US"] },
+                { key: "fi-FI", name: "Finnish", to: ["en-US"] },
+                { key: "fr-FR", name: "French", to: ["en-US"] },
+                { key: "he-IL", name: "Hebrew", to: ["en-US"] },
+                { key: "hi-IN", name: "Hindi", to: ["en-US"] },
+                { key: "hr-HR", name: "Croatian", to: ["en-US"] },
+                { key: "hu-HU", name: "Hungarian", to: ["en-US"] },
+                { key: "id-ID", name: "Indonesian", to: ["en-US"] },
+                { key: "it-IT", name: "Italian", to: ["en-US"] },
+                { key: "ja-JP", name: "Japanese", to: ["en-US"] },
+                { key: "kk-KZ", name: "Kazakh", to: ["en-US"] },
+                { key: "ko-KR", name: "Korean", to: ["en-US"] },
+                { key: "lt-LT", name: "Lithuanian", to: ["en-US"] },
+                { key: "lv-LV", name: "Latvian", to: ["en-US"] },
+                { key: "ms-MY", name: "Malay", to: ["en-US"] },
+                { key: "nb-NO", name: "Norwegian", to: ["en-US"] },
+                { key: "nl-NL", name: "Dutch", to: ["en-US"] },
+                { key: "pl-PL", name: "Polish", to: ["en-US"] },
+                { key: "pt-BR", name: "Portuguese (Brazilian)", to: ["en-US"] },
+                { key: "ro-RO", name: "Romanian", to: ["en-US"] },
+                { key: "ru-RU", name: "Russian", to: ["en-US"] },
+                { key: "sk-SK", name: "Slovak", to: ["en-US"] },
+                { key: "sl-SI", name: "Slovenian", to: ["en-US"] },
+                { key: "sr-Latn-RS", name: "Serbian (Latin)", to: ["en-US"] },
+                { key: "sv-SE", name: "Swedish", to: ["en-US"] },
+                { key: "th-TH", name: "Thai", to: ["en-US"] },
+                { key: "tr-TR", name: "Turkish", to: ["en-US"] },
+                { key: "uk-UA", name: "Ukrainian", to: ["en-US"] },
+                { key: "vi-VN", name: "Vietnamese", to: ["en-US"] },
+                { key: "zh-CN", name: "Chinese (Simplified)", to: ["en-US"] },
+                { key: "zh-TW", name: "Chinese (Traditional)", to: ["en-US"] }
             ];
-            const oModel = new sap.ui.model.json.JSONModel({ dai: { hasFile: false, fileObject: null, previewUrl: null, isPdf: false, isImage: false, jobId: null, headerFields: [], lineItems: [] }, trans: { hasFile: false, fileObject: null, transformToPdf: false, sourceLanguages: MASTER_LANGUAGES, targetLanguages: [], selectedSource: "en-US", selectedTarget: "es-ES" } });
-            sap.ui.getCore().setModel(oModel); updateTargets("en-US");
 
-            // --- UI ---
-            const oUploaderDAI = new sap.ui.unified.FileUploader({ width: "100%", placeholder: "Factura...", fileType: ["pdf","jpg","png"], change: onFileChangeDAI });
-            const oBtnExtract = new sap.m.Button({ text: "1. Analizar", type: "Emphasized", icon: "sap-icon://process", enabled: "{/dai/hasFile}", press: onExtractData });
-            const oBtnConfirm = new sap.m.Button({ text: "2. Confirmar y Guardar", type: "Accept", icon: "sap-icon://save", enabled: "{= ${/dai/headerFields}.length > 0}", press: onConfirmFeedback });
+            const TRANS_FORMATS = [
+                { ext: ".txt", mime: "text/plain", desc: "Texto (UTF-8)" },
+                { ext: ".html; .htm", mime: "text/html", desc: "HTML (UTF-8)" },
+                { ext: ".xlf; .xliff", mime: "application/x-xliff+xml", desc: "XLIFF 1.2 / 2.0 (UTF-8)" },
+                { ext: ".docx", mime: "Word", desc: "Word" },
+                { ext: ".docm", mime: "Word Macro", desc: "Word (Macros)" },
+                { ext: ".xlsx", mime: "Excel", desc: "Excel" },
+                { ext: ".pptx", mime: "PowerPoint", desc: "PowerPoint" },
+                { ext: ".pdf", mime: "application/pdf", desc: "Adobe PDF" },
+            ];
 
-            const oTableHeaders = new sap.m.Table({ headerText: "Cabecera", columns: [ new sap.m.Column({ header: new sap.m.Label({text:"Campo"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Valor"}) }), new sap.m.Column({ header: new sap.m.Label({text:"¿Corregir?"}), width:"15%" }), new sap.m.Column({ header: new sap.m.Label({text:"Nuevo Valor"}) }) ], items: { path: "/dai/headerFields", template: new sap.m.ColumnListItem({ cells: [ new sap.m.Text({ text: "{name}" }), new sap.m.Text({ text: "{originalValue}" }), new sap.m.CheckBox({ selected: "{isIncorrect}" }), new sap.m.Input({ value: "{value}", visible: "{isIncorrect}" }) ] }) } });
+            const AI_FORMATS = [
+                { type: "Documentos de una página", formats: "JPEG, PNG, TIFF" },
+                { type: "Facturas Electrónicas", formats: "PDF, XML Híbrido, Factur-X" },
+                { type: "Avisos de Pago", formats: "XLS, XLSX, PDF" },
+                { type: "Documentos PDF estándar", formats: "PDF (Digital o Escaneado)" }
+            ];
+
+            const oModel = new sap.ui.model.json.JSONModel({ 
+                dai: { hasFile: false, fileObject: null, previewUrl: null, isPdf: false, isImage: false, jobId: null, headerFields: [], lineItems: [] }, 
+                trans: { 
+                    hasFile: false, 
+                    fileObject: null, 
+                    transformToPdf: false, 
+                    sourceLanguages: MASTER_LANGUAGES, 
+                    targetLanguages: [], 
+                    selectedSource: "en-US", 
+                    selectedTarget: "es-ES" 
+                },
+                info: { transFormats: TRANS_FORMATS, aiFormats: AI_FORMATS }
+            });
+            sap.ui.getCore().setModel(oModel); 
+            
+            // Inicializar filtro de idiomas
+            updateTargetLanguages("en-US");
+
+            // --- 2. UI: PANEL DOX (Extracción) ---
+            const oUploaderDAI = new sap.ui.unified.FileUploader({ width: "100%", placeholder: "Factura (PDF/IMG)...", fileType: ["pdf","jpg","png","jpeg"], change: onFileChangeDAI });
+            const oBtnExtract = new sap.m.Button({ text: "Analizar con IA", type: "Emphasized", icon: "sap-icon://process", enabled: "{/dai/hasFile}", press: onExtractData });
+            const oBtnConfirm = new sap.m.Button({ text: "Confirmar Datos", type: "Accept", icon: "sap-icon://save", enabled: "{= ${/dai/headerFields}.length > 0}", press: onConfirmFeedback });
+
+            const oTableHeaders = new sap.m.Table({ 
+                headerText: "Cabecera Detectada", 
+                columns: [ 
+                    new sap.m.Column({ header: new sap.m.Label({text:"Campo"}) }), 
+                    new sap.m.Column({ header: new sap.m.Label({text:"Valor Original"}) }), 
+                    new sap.m.Column({ header: new sap.m.Label({text:"¿Corregir?"}), width:"15%" }), 
+                    new sap.m.Column({ header: new sap.m.Label({text:"Valor Corregido"}) }) 
+                ], 
+                items: { 
+                    path: "/dai/headerFields", 
+                    template: new sap.m.ColumnListItem({ 
+                        cells: [ 
+                            new sap.m.Text({ text: "{name}" }), 
+                            new sap.m.Text({ text: "{originalValue}" }), 
+                            new sap.m.CheckBox({ selected: "{isIncorrect}" }), 
+                            new sap.m.Input({ value: "{value}", visible: "{isIncorrect}" }) 
+                        ] 
+                    }) 
+                } 
+            });
             
             const oTableItems = new sap.m.Table({
-                headerToolbar: new sap.m.Toolbar({ content: [ new sap.m.Title({ text: "Ítems" }), new sap.m.ToolbarSpacer(), new sap.m.Button({ icon: "sap-icon://add", text: "Añadir", press: onAddLineItem }) ] }),
-                columns: [ new sap.m.Column({ header: new sap.m.Label({text:"Desc"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Cant"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Precio"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Neto"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Mat"}) }), new sap.m.Column({ header: new sap.m.Label({text:"UoM"}) }), new sap.m.Column({ width:"5%" }) ],
-                items: { path: "/dai/lineItems", template: new sap.m.ColumnListItem({ cells: [ new sap.m.Input({ value: "{description}" }), new sap.m.Input({ value: "{quantity}" }), new sap.m.Input({ value: "{unitPrice}" }), new sap.m.Input({ value: "{netAmount}" }), new sap.m.Input({ value: "{materialNumber}" }), new sap.m.Input({ value: "{unitOfMeasure}" }), new sap.m.Button({ icon: "sap-icon://delete", type: "Transparent", press: onDeleteLineItem }) ] }) }
+                headerToolbar: new sap.m.Toolbar({ content: [ new sap.m.Title({ text: "Ítems de Línea" }), new sap.m.ToolbarSpacer(), new sap.m.Button({ icon: "sap-icon://add", text: "Añadir", press: onAddLineItem }) ] }),
+                columns: [ new sap.m.Column({ header: new sap.m.Label({text:"Desc"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Cant"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Precio"}) }), new sap.m.Column({ header: new sap.m.Label({text:"Total"}) }), new sap.m.Column({ width:"5%" }) ],
+                items: { 
+                    path: "/dai/lineItems", 
+                    template: new sap.m.ColumnListItem({ 
+                        cells: [ 
+                            new sap.m.Input({ value: "{description}" }), 
+                            new sap.m.Input({ value: "{quantity}" }), 
+                            new sap.m.Input({ value: "{unitPrice}" }), 
+                            new sap.m.Input({ value: "{netAmount}" }), 
+                            new sap.m.Button({ icon: "sap-icon://delete", type: "Transparent", press: onDeleteLineItem }) 
+                        ] 
+                    }) 
+                }
             });
 
-            const oPanelDAI = new sap.m.Panel({ headerText: "Extracción", expandable: true, expanded: true, content: [ new sap.ui.layout.Grid({ defaultSpan: "L6 M6 S12", content: [ new sap.m.VBox({ items: [ new sap.m.Label({text:"Archivo:"}), oUploaderDAI, new sap.m.Image({ src:"{/dai/previewUrl}", width:"100%", visible:"{/dai/isImage}" }).addStyleClass("preview-img"), new sap.m.PDFViewer({ source:"{/dai/previewUrl}", height:"500px", visible:"{/dai/isPdf}" }).addStyleClass("pdf-viewer") ]}), new sap.m.VBox({ items: [ new sap.m.Label({text:"Flujo:"}), oBtnExtract, oTableHeaders, oTableItems, oBtnConfirm ]}) ]})] });
+            const oPanelDAI = new sap.m.Panel({ 
+                headerText: "1. Extracción Inteligente de datos de Documentos ", 
+                expandable: true, expanded: true, 
+                content: [ 
+                    new sap.ui.layout.Grid({ 
+                        defaultSpan: "L6 M6 S12", 
+                        content: [ 
+                            new sap.m.VBox({ items: [ new sap.m.Label({text:"Documento:"}), oUploaderDAI, new sap.m.Image({ src:"{/dai/previewUrl}", width:"100%", visible:"{/dai/isImage}" }).addStyleClass("preview-img"), new sap.m.PDFViewer({ source:"{/dai/previewUrl}", height:"500px", visible:"{/dai/isPdf}" }).addStyleClass("pdf-viewer") ]}), 
+                            new sap.m.VBox({ items: [ new sap.m.Label({text:"Acciones:"}), oBtnExtract, oTableHeaders, oTableItems, oBtnConfirm ]}) 
+                        ]
+                    })
+                ]
+            });
 
-            const oUploaderTrans = new sap.ui.unified.FileUploader({ width: "100%", placeholder: "Doc a Traducir...", change: onFileChangeTrans });
-            const oLangSrc = new sap.m.ComboBox({ items: { path: "/trans/sourceLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) }, selectedKey: "{/trans/selectedSource}", selectionChange: e => updateTargets(e.getParameter("selectedItem").getKey()) });
-            const oLangTrg = new sap.m.ComboBox({ items: { path: "/trans/targetLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) }, selectedKey: "{/trans/selectedTarget}" });
-            const oSwitchPdf = new sap.m.CheckBox({ text: "PDF via iLovePDF", selected: "{/trans/transformToPdf}" });
-            const oBtnTranslate = new sap.m.Button({ text: "Traducir", type: "Emphasized", enabled: "{/trans/hasFile}", press: onTranslate });
-            const oPanelTrans = new sap.m.Panel({ headerText: "Traducción", expandable: true, expanded: false, content: [ new sap.m.VBox({ items: [oUploaderTrans, new sap.m.HBox({items:[oLangSrc, oLangTrg]}), oSwitchPdf, oBtnTranslate] }) ] });
-
-            new sap.m.App({ pages: [ new sap.m.Page({ title: "Portal SAP BTP", content: [ new sap.m.VBox({ items: [oPanelDAI, oPanelTrans] }).addStyleClass("sapUiMediumMargin") ] }) ] }).placeAt("content");
-
-            function updateTargets(k){ const s = MASTER_LANGUAGES.find(l=>l.key===k); const t = MASTER_LANGUAGES.filter(l=>s && s.to.includes(l.key)); oModel.setProperty("/trans/targetLanguages", t); if(t.length) oModel.setProperty("/trans/selectedTarget", t[0].key); }
-            function onFileChangeDAI(e) { const f = e.getSource().getDomRef().querySelector('input[type="file"]').files[0]; if(f) { oModel.setProperty("/dai/fileObject", f); oModel.setProperty("/dai/hasFile", true); oModel.setProperty("/dai/previewUrl", URL.createObjectURL(f)); oModel.setProperty("/dai/isPdf", f.type === "application/pdf"); oModel.setProperty("/dai/isImage", f.type.startsWith("image")); oModel.setProperty("/dai/headerFields", []); oModel.setProperty("/dai/lineItems", []); } }
-            function onFileChangeTrans(e) { const f = e.getSource().getDomRef().querySelector('input[type="file"]').files[0]; if(f){ oModel.setProperty("/trans/fileObject", f); oModel.setProperty("/trans/hasFile", true); } }
+            // --- 3. UI: PANEL TRADUCCIÓN ---
+            const oUploaderTrans = new sap.ui.unified.FileUploader({ width: "100%", placeholder: "Documento Office a traducir...", change: onFileChangeTrans });
             
+            // Combos Inteligentes
+            const oLangSrc = new sap.m.ComboBox({ 
+                placeholder:"Origen", 
+                items: { path: "/trans/sourceLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) }, 
+                selectedKey: "{/trans/selectedSource}", 
+                selectionChange: function(e) { updateTargetLanguages(e.getParameter("selectedItem").getKey()); } 
+            });
+            
+            const oLangTrg = new sap.m.ComboBox({ 
+                placeholder:"Destino", 
+                items: { path: "/trans/targetLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) }, 
+                selectedKey: "{/trans/selectedTarget}" 
+            });
+
+            const oSwitchPdf = new sap.m.CheckBox({ text: "Convertir resultado a PDF (vía iLovePDF)", selected: "{/trans/transformToPdf}" });
+            const oBtnTranslate = new sap.m.Button({ text: "Traducir y Descargar", type: "Emphasized", enabled: "{/trans/hasFile}", press: onTranslate });
+            
+            const oPanelTrans = new sap.m.Panel({ 
+                headerText: "2. Traducción de documentos", 
+                expandable: true, expanded: false, 
+                content: [ 
+                    new sap.m.VBox({ items: [
+                        oUploaderTrans, 
+                        new sap.m.HBox({items:[oLangSrc, new sap.m.Label({text:" -> "}).addStyleClass("sapUiSmallMargin"), oLangTrg], alignItems:"Center"}), 
+                        oSwitchPdf, 
+                        oBtnTranslate
+                    ] }).addStyleClass("sapUiSmallMargin") 
+                ] 
+            });
+
+            // HEADER BOTÓN INFO
+            const oInfoBtn = new sap.m.Button({ icon: "sap-icon://hint", text: "Formatos Soportados", press: onOpenInfo });
+
+            // APP PRINCIPAL
+            new sap.m.App({ 
+                pages: [ 
+                    new sap.m.Page({ 
+                        title: "Portal de Servicios de IA", 
+                        headerContent: [oInfoBtn],
+                        content: [ new sap.m.VBox({ items: [oPanelDAI, oPanelTrans] }).addStyleClass("sapUiMediumMargin") ] 
+                    }) 
+                ] 
+            }).placeAt("content");
+
+            // --- LÓGICA DEL CONTROLADOR ---
+
+            function updateTargetLanguages(sourceKey) {
+                const sourceObj = MASTER_LANGUAGES.find(l => l.key === sourceKey);
+                if (sourceObj && sourceObj.to) {
+                    const validTargets = MASTER_LANGUAGES.filter(l => sourceObj.to.includes(l.key));
+                    oModel.setProperty("/trans/targetLanguages", validTargets);
+                    
+                    // Auto-seleccionar si el actual no es válido
+                    const currentTarget = oModel.getProperty("/trans/selectedTarget");
+                    const isValid = validTargets.some(t => t.key === currentTarget);
+                    
+                    if (!isValid && validTargets.length > 0) {
+                        oModel.setProperty("/trans/selectedTarget", validTargets[0].key);
+                        sap.m.MessageToast.show("Destino ajustado automáticamente");
+                    }
+                } else {
+                    oModel.setProperty("/trans/targetLanguages", []);
+                }
+            }
+
+            function onFileChangeDAI(e) { 
+                const f = e.getSource().getDomRef().querySelector('input[type="file"]').files[0]; 
+                if(f) { 
+                    oModel.setProperty("/dai/fileObject", f); 
+                    oModel.setProperty("/dai/hasFile", true); 
+                    oModel.setProperty("/dai/previewUrl", URL.createObjectURL(f)); 
+                    oModel.setProperty("/dai/isPdf", f.type === "application/pdf"); 
+                    oModel.setProperty("/dai/isImage", f.type.startsWith("image")); 
+                    oModel.setProperty("/dai/headerFields", []); 
+                    oModel.setProperty("/dai/lineItems", []); 
+                } 
+            }
+
+            function onFileChangeTrans(e) { 
+                const f = e.getSource().getDomRef().querySelector('input[type="file"]').files[0]; 
+                if(f){ 
+                    oModel.setProperty("/trans/fileObject", f); 
+                    oModel.setProperty("/trans/hasFile", true); 
+                } 
+            }
+            
+            // --- 1. EXTRACT DATA ---
             function onExtractData() {
                 const f = oModel.getProperty("/dai/fileObject"); if(!f) return;
-                const busy = new sap.m.BusyDialog({text:"Analizando..."}); busy.open();
+                const busy = new sap.m.BusyDialog({text:"Procesando en Backend..."}); busy.open();
+                
                 const fd = new FormData(); fd.append("file", f);
-                fetch("/uploadInvoice", { method: "POST", body: fd }).then(r=>r.json()).then(d => {
+                
+                fetch("/uploadInvoice", { method: "POST", body: fd })
+                .then(r => {
+                    if (!r.ok) throw new Error("Error en Backend Node.js");
+                    return r.json();
+                })
+                .then(d => {
                     oModel.setProperty("/dai/jobId", d.id);
+                    // Mapeo
                     const h = (d.extraction?.headerFields||[]).map(x=>({ name:x.name, value:x.value, originalValue:x.value, confidence:x.confidence, isIncorrect:false }));
                     oModel.setProperty("/dai/headerFields", h);
                     const i = (d.extraction?.lineItems||[]).map(r=>({ 
                         description:r.find(c=>c.name==="description")?.value||"", 
                         quantity:r.find(c=>c.name==="quantity")?.value||"", 
                         unitPrice:r.find(c=>c.name==="unitPrice")?.value||"", 
-                        netAmount:r.find(c=>c.name==="netAmount")?.value||"", 
-                        materialNumber:r.find(c=>c.name==="materialNumber")?.value||"", 
-                        unitOfMeasure:r.find(c=>c.name==="unitOfMeasure")?.value||"" 
+                        netAmount:r.find(c=>c.name==="netAmount")?.value||""
                     }));
                     oModel.setProperty("/dai/lineItems", i);
-                }).catch(e=>sap.m.MessageBox.error("Error:"+e)).finally(()=>busy.close());
+                    sap.m.MessageToast.show("Extracción completada");
+                })
+                .catch(e => sap.m.MessageBox.error("Error: " + e.message))
+                .finally(() => busy.close());
             }
-            function onAddLineItem() { const i = oModel.getProperty("/dai/lineItems"); i.push({ description:"", quantity:"", unitPrice:"", netAmount:"", materialNumber:"", unitOfMeasure:"" }); oModel.setProperty("/dai/lineItems", i); }
+
+            function onAddLineItem() { const i = oModel.getProperty("/dai/lineItems"); i.push({ description:"", quantity:"", unitPrice:"", netAmount:"" }); oModel.setProperty("/dai/lineItems", i); }
             function onDeleteLineItem(e) { const p = e.getSource().getBindingContext().getPath(); const i = parseInt(p.split("/").pop()); const arr = oModel.getProperty("/dai/lineItems"); arr.splice(i, 1); oModel.setProperty("/dai/lineItems", arr); }
+
+            // --- 2. CONFIRM DATA ---
             function onConfirmFeedback() {
                 const id = oModel.getProperty("/dai/jobId");
                 const h = oModel.getProperty("/dai/headerFields").map(f=>({ name:f.name, value:f.isIncorrect?f.value:f.originalValue }));
-                const i = oModel.getProperty("/dai/lineItems").map(r=>[ {name:"description",value:r.description}, {name:"quantity",value:r.quantity}, {name:"unitPrice",value:r.unitPrice}, {name:"netAmount",value:r.netAmount}, {name:"materialNumber",value:r.materialNumber}, {name:"unitOfMeasure",value:r.unitOfMeasure} ]);
-                const busy = new sap.m.BusyDialog({text:"Guardando..."}); busy.open();
-                fetch("/confirmDocument", { method:"POST", headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId:id, headerFields:h, lineItems:i}) })
-                .then(r=>r.json()).then(d=>sap.m.MessageBox.success("Confirmado.")).catch(e=>sap.m.MessageBox.error(e)).finally(()=>busy.close());
+                const i = oModel.getProperty("/dai/lineItems");
+                
+                const busy = new sap.m.BusyDialog({text:"Guardando Feedback..."}); busy.open();
+                
+                fetch("/confirmDocument", { 
+                    method:"POST", 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({jobId:id, headerFields:h, lineItems:i}) 
+                })
+                .then(r => r.json())
+                .then(d => sap.m.MessageToast.show("Confirmado correctamente."))
+                .catch(e => sap.m.MessageBox.error("Error al confirmar: " + e))
+                .finally(() => busy.close());
             }
+
+            // --- 3. TRANSLATE ---
             async function onTranslate() {
                 const f = oModel.getProperty("/trans/fileObject"); if(!f) return;
-                const fd = new FormData(); fd.append("file", f); fd.append("sourceLang", oModel.getProperty("/trans/selectedSource")); fd.append("targetLang", oModel.getProperty("/trans/selectedTarget")); fd.append("convertToPdf", oModel.getProperty("/trans/transformToPdf"));
-                const busy = new sap.m.BusyDialog({text:"Traduciendo..."}); busy.open();
+                
+                const fd = new FormData(); 
+                fd.append("file", f); 
+                fd.append("sourceLang", oModel.getProperty("/trans/selectedSource")); 
+                fd.append("targetLang", oModel.getProperty("/trans/selectedTarget")); 
+                fd.append("convertToPdf", oModel.getProperty("/trans/transformToPdf"));
+
+                const busy = new sap.m.BusyDialog({text:"Traduciendo y Convirtiendo (si aplica)..."}); 
+                busy.open();
+                
                 try {
                     const r = await fetch("/translateFile", { method:"POST", body:fd });
-                    if(!r.ok) throw new Error("Error");
-                    const b = await r.blob(); const u = window.URL.createObjectURL(b);
-                    // Detección automática de extensión basada en respuesta
+                    
+                    if(!r.ok) {
+                        const errTxt = await r.text();
+                        let errMsg = errTxt;
+                        try { errMsg = JSON.parse(errTxt).error; } catch(e){}
+                        throw new Error(errMsg || "Error desconocido en el servidor");
+                    }
+
+                    const b = await r.blob(); 
+                    const u = window.URL.createObjectURL(b);
+                    
                     const type = r.headers.get("Content-Type");
                     let ext = "docx";
                     if(type.includes("sheet") || type.includes("excel")) ext = "xlsx";
-                    if(type.includes("presentation") || type.includes("powerpoint")) ext = "pptx";
-                    if(type.includes("pdf")) ext = "pdf";
-                    const a = document.createElement('a'); a.href=u; a.download=`Traducido.${ext}`; a.click();
-                } catch(e){ sap.m.MessageBox.error(e.message); } finally { busy.close(); }
+                    else if(type.includes("presentation") || type.includes("powerpoint")) ext = "pptx";
+                    else if(type.includes("pdf")) ext = "pdf";
+
+                    const a = document.createElement('a'); 
+                    a.href = u; 
+                    a.download = `Traducido.${ext}`; 
+                    document.body.appendChild(a); 
+                    a.click();
+                    
+                    sap.m.MessageToast.show(`Descargado como .${ext}`);
+                    
+                } catch(e){ 
+                    sap.m.MessageBox.error("Error Traducción: " + e.message); 
+                } finally { 
+                    busy.close(); 
+                }
+            }
+
+            // --- INFO DIALOG ---
+            let _oInfoDialog;
+            function onOpenInfo() {
+                if (!_oInfoDialog) {
+                    const oTableTrans = new sap.m.Table({
+                        columns: [ new sap.m.Column({header: new sap.m.Label({text:"Ext"})}), new sap.m.Column({header: new sap.m.Label({text:"Desc"})}) ],
+                        items: { path: "/info/transFormats", template: new sap.m.ColumnListItem({ cells: [ new sap.m.Text({text:"{ext}"}), new sap.m.Text({text:"{desc}"}) ] }) }
+                    });
+                    const oListAI = new sap.m.List({
+                        items: { path: "/info/aiFormats", template: new sap.m.StandardListItem({ title: "{type}", description: "{formats}", icon: "sap-icon://document" }) }
+                    });
+                    _oInfoDialog = new sap.m.Dialog({
+                        title: "Formatos Soportados", contentWidth: "600px",
+                        content: [ new sap.m.IconTabBar({ items: [
+                            new sap.m.IconTabFilter({ text: "Translation Hub", icon: "sap-icon://translate", content: [oTableTrans] }),
+                            new sap.m.IconTabFilter({ text: "Document AI", icon: "sap-icon://learning-assistant", content: [oListAI] })
+                        ]})],
+                        beginButton: new sap.m.Button({ text: "Cerrar", press: function() { _oInfoDialog.close(); } })
+                    });
+                    sap.ui.getCore().byId("content").addDependent(_oInfoDialog);
+                }
+                _oInfoDialog.open();
             }
         });
     </script>

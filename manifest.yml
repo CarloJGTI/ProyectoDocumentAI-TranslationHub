@@ -1,14 +1,17 @@
 ---
 applications:
-  - name: aiservices-app         # El nombre que tendrá en BTP
+  - name: aiservices-app         
     path: .
-    memory: 256M                 # Memoria asignada
+    memory: 256M                 
     buildpack: nodejs_buildpack
-    random-route: true           # Crea una URL única (ej: aiservices-app-random.cfapps...)
-    command: node srv/server.js  # Comando de inicio
+    random-route: true           
+    command: node srv/server.js  
     services:
-      - default_sap-document-information-extraction            
-      - default_document-translation
+      - default_sap-document-information-extraction
+    # -----------------------------------------------------------
+    # VARIABLES DE ENTORNO
+    # -----------------------------------------------------------
     env:
+      ILOVEPDF_PUBLIC_KEY: "project_public_b969a38fd4601924ed29a0b22c2dbf7c_9f-Gj2993a87832a396acedd998c2dc10a9e8"
       SANDBOX-API-KEY: "NQSRAC0Pg4WzlokOGjvFM5bOozDlcilJ"
       OPTIMIZE_MEMORY: true
