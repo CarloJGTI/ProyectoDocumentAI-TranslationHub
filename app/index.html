@@ -162,7 +162,6 @@
             // --- 3. UI: PANEL TRADUCCIÓN ---
             const oUploaderTrans = new sap.ui.unified.FileUploader({ width: "100%", placeholder: "Documento Office a traducir...", change: onFileChangeTrans });
             
-            // Combos Inteligentes
             const oLangSrc = new sap.m.ComboBox({ 
                 placeholder:"Origen", 
                 items: { path: "/trans/sourceLanguages", template: new sap.ui.core.Item({ key: "{key}", text: "{name}" }) }, 
@@ -192,10 +191,8 @@
                 ] 
             });
 
-            // HEADER BOTÓN INFO
             const oInfoBtn = new sap.m.Button({ icon: "sap-icon://hint", text: "Formatos Soportados", press: onOpenInfo });
 
-            // APP PRINCIPAL
             new sap.m.App({ 
                 pages: [ 
                     new sap.m.Page({ 
@@ -213,14 +210,9 @@
                 if (sourceObj && sourceObj.to) {
                     const validTargets = MASTER_LANGUAGES.filter(l => sourceObj.to.includes(l.key));
                     oModel.setProperty("/trans/targetLanguages", validTargets);
-                    
-                    // Auto-seleccionar si el actual no es válido
                     const currentTarget = oModel.getProperty("/trans/selectedTarget");
-                    const isValid = validTargets.some(t => t.key === currentTarget);
-                    
-                    if (!isValid && validTargets.length > 0) {
+                    if (!validTargets.some(t => t.key === currentTarget) && validTargets.length > 0) {
                         oModel.setProperty("/trans/selectedTarget", validTargets[0].key);
-                        sap.m.MessageToast.show("Destino ajustado automáticamente");
                     }
                 } else {
                     oModel.setProperty("/trans/targetLanguages", []);
@@ -242,13 +234,9 @@
 
             function onFileChangeTrans(e) { 
                 const f = e.getSource().getDomRef().querySelector('input[type="file"]').files[0]; 
-                if(f){ 
-                    oModel.setProperty("/trans/fileObject", f); 
-                    oModel.setProperty("/trans/hasFile", true); 
-                } 
+                if(f){ oModel.setProperty("/trans/fileObject", f); oModel.setProperty("/trans/hasFile", true); } 
             }
             
-            // --- 1. EXTRACT DATA ---
             function onExtractData() {
                 const f = oModel.getProperty("/dai/fileObject"); if(!f) return;
                 const busy = new sap.m.BusyDialog({text:"Procesando en Backend..."}); busy.open();
@@ -256,13 +244,9 @@
                 const fd = new FormData(); fd.append("file", f);
                 
                 fetch("/uploadInvoice", { method: "POST", body: fd })
-                .then(r => {
-                    if (!r.ok) throw new Error("Error en Backend Node.js");
-                    return r.json();
-                })
+                .then(r => { if (!r.ok) throw new Error("Error Backend"); return r.json(); })
                 .then(d => {
                     oModel.setProperty("/dai/jobId", d.id);
-                    // Mapeo
                     const h = (d.extraction?.headerFields||[]).map(x=>({ name:x.name, value:x.value, originalValue:x.value, confidence:x.confidence, isIncorrect:false }));
                     oModel.setProperty("/dai/headerFields", h);
                     const i = (d.extraction?.lineItems||[]).map(r=>({ 
@@ -278,70 +262,108 @@
                 .finally(() => busy.close());
             }
 
-            function onAddLineItem() { const i = oModel.getProperty("/dai/lineItems"); i.push({ description:"", quantity:"", unitPrice:"", netAmount:"" }); oModel.setProperty("/dai/lineItems", i); }
-            function onDeleteLineItem(e) { const p = e.getSource().getBindingContext().getPath(); const i = parseInt(p.split("/").pop()); const arr = oModel.getProperty("/dai/lineItems"); arr.splice(i, 1); oModel.setProperty("/dai/lineItems", arr); }
+            function onAddLineItem() { 
+                const i = oModel.getProperty("/dai/lineItems"); 
+                i.push({ description:"", quantity:"", unitPrice:"", netAmount:"" }); 
+                oModel.setProperty("/dai/lineItems", i); 
+            }
+            
+            function onDeleteLineItem(e) { 
+                const p = e.getSource().getBindingContext().getPath(); 
+                const i = parseInt(p.split("/").pop()); 
+                const arr = oModel.getProperty("/dai/lineItems"); 
+                arr.splice(i, 1); 
+                oModel.setProperty("/dai/lineItems", arr); 
+            }
 
-            // --- 2. CONFIRM DATA ---
-            function onConfirmFeedback() {
+            // --- 2. CONFIRM DATA (CORREGIDO PARA DOBLE LLAMADA) ---
+            async function onConfirmFeedback() {
                 const id = oModel.getProperty("/dai/jobId");
-                const h = oModel.getProperty("/dai/headerFields").map(f=>({ name:f.name, value:f.isIncorrect?f.value:f.originalValue }));
-                const i = oModel.getProperty("/dai/lineItems");
                 
-                const busy = new sap.m.BusyDialog({text:"Guardando Feedback..."}); busy.open();
+                // 1. Mapeo de Cabecera (Ground Truth Format)
+                const hFields = oModel.getProperty("/dai/headerFields").map(f => ({
+                    name: f.name,
+                    value: f.isIncorrect ? f.value : f.originalValue
+                }));
                 
-                fetch("/confirmDocument", { 
-                    method:"POST", 
-                    headers:{'Content-Type':'application/json'}, 
-                    body:JSON.stringify({jobId:id, headerFields:h, lineItems:i}) 
-                })
-                .then(r => r.json())
-                .then(d => sap.m.MessageToast.show("Confirmado correctamente."))
-                .catch(e => sap.m.MessageBox.error("Error al confirmar: " + e))
-                .finally(() => busy.close());
+                // 2. Mapeo de Items (La parte compleja)
+                // SAP espera array de arrays de objetos {name, value}. 
+                // Convertimos el modelo plano de la tabla UI5 al formato jerárquico de SAP.
+                const uiItems = oModel.getProperty("/dai/lineItems");
+                const lItems = uiItems.map(row => [
+                    { name: "description", value: row.description },
+                    { name: "quantity", value: row.quantity ? parseFloat(row.quantity) : 0 }, // Asegurar numérico si es necesario
+                    { name: "unitPrice", value: row.unitPrice ? parseFloat(row.unitPrice) : 0 },
+                    { name: "netAmount", value: row.netAmount ? parseFloat(row.netAmount) : 0 }
+                ]);
+
+                const busy = new sap.m.BusyDialog({text:"Enviando correcciones y confirmando..."});
+                busy.open();
+
+                try {
+                    // PASO A: Enviar Correcciones (POST /updateDocument)
+                    const resUpdate = await fetch("/updateDocument", {
+                        method: "POST",
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ jobId: id, headerFields: hFields, lineItems: lItems })
+                    });
+                    
+                    if (!resUpdate.ok) {
+                        const err = await resUpdate.json();
+                        throw new Error("Fallo al guardar correcciones: " + (err.error || "Error desconocido"));
+                    }
+
+                    // PASO B: Confirmar Estado (POST /confirmDocument)
+                    const resConfirm = await fetch("/confirmDocument", {
+                        method: "POST",
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ jobId: id })
+                    });
+
+                    if (resConfirm.ok) {
+                        sap.m.MessageToast.show("Documento confirmado en SAP correctamente.");
+                        // Opcional: Limpiar o bloquear campos
+                    } else {
+                        throw new Error("Fallo al cambiar estado a CONFIRMED");
+                    }
+
+                } catch (e) {
+                    sap.m.MessageBox.error("Error en el proceso: " + e.message);
+                } finally {
+                    busy.close();
+                }
             }
 
             // --- 3. TRANSLATE ---
             async function onTranslate() {
                 const f = oModel.getProperty("/trans/fileObject"); if(!f) return;
-                
                 const fd = new FormData(); 
                 fd.append("file", f); 
                 fd.append("sourceLang", oModel.getProperty("/trans/selectedSource")); 
                 fd.append("targetLang", oModel.getProperty("/trans/selectedTarget")); 
                 fd.append("convertToPdf", oModel.getProperty("/trans/transformToPdf"));
 
-                const busy = new sap.m.BusyDialog({text:"Traduciendo y Convirtiendo (si aplica)..."}); 
-                busy.open();
-                
+                const busy = new sap.m.BusyDialog({text:"Traduciendo..."}); busy.open();
                 try {
                     const r = await fetch("/translateFile", { method:"POST", body:fd });
-                    
                     if(!r.ok) {
-                        const errTxt = await r.text();
-                        let errMsg = errTxt;
-                        try { errMsg = JSON.parse(errTxt).error; } catch(e){}
-                        throw new Error(errMsg || "Error desconocido en el servidor");
+                        const txt = await r.text();
+                        let msg = txt; try{ msg = JSON.parse(txt).error }catch(e){}
+                        throw new Error(msg);
                     }
-
                     const b = await r.blob(); 
                     const u = window.URL.createObjectURL(b);
-                    
                     const type = r.headers.get("Content-Type");
                     let ext = "docx";
-                    if(type.includes("sheet") || type.includes("excel")) ext = "xlsx";
-                    else if(type.includes("presentation") || type.includes("powerpoint")) ext = "pptx";
-                    else if(type.includes("pdf")) ext = "pdf";
+                    if(type.includes("sheet")||type.includes("excel")) ext="xlsx";
+                    else if(type.includes("presentation")||type.includes("powerpoint")) ext="pptx";
+                    else if(type.includes("pdf")) ext="pdf";
 
-                    const a = document.createElement('a'); 
-                    a.href = u; 
-                    a.download = `Traducido.${ext}`; 
-                    document.body.appendChild(a); 
-                    a.click();
-                    
-                    sap.m.MessageToast.show(`Descargado como .${ext}`);
-                    
+                    const a = document.createElement('a'); a.href=u; a.download=`Traducido.${ext}`; 
+                    document.body.appendChild(a); a.click();
+                    sap.m.MessageToast.show(`Descargado (.${ext})`);
                 } catch(e){ 
-                    sap.m.MessageBox.error("Error Traducción: " + e.message); 
+                    sap.m.MessageBox.error("Error: " + e.message); 
                 } finally { 
                     busy.close(); 
                 }

@@ -12,6 +12,6 @@ applications:
     # VARIABLES DE ENTORNO
     # -----------------------------------------------------------
     env:
-      ILOVEPDF_PUBLIC_KEY: "project_public_b969a38fd4601924ed29a0b22c2dbf7c_9f-Gj2993a87832a396acedd998c2dc10a9e8"
-      SANDBOX-API-KEY: "NQSRAC0Pg4WzlokOGjvFM5bOozDlcilJ"
+      ILOVEPDF_PUBLIC_KEY: "project_public_key (COMPLETAR)"
+      SANDBOX-API-KEY: "NQSRAC0Pg4WzlokOGjvFM5bOozDlcilJ (EN CASO DE FALLBACK)"
       OPTIMIZE_MEMORY: true

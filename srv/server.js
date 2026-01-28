@@ -138,7 +138,31 @@ app.post('/uploadInvoice', upload.single('file'), async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); } finally { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); }
 });
 
-app.post('/confirmDocument', async (req, res) => { res.json({status:"ok"}); });
+app.post('/confirmDocument', async (req, res) => {
+    try {
+        const { jobId } = req.body;
+        if (!jobId) throw new Error("Falta el Job ID para confirmar");
+
+        console.log(`-> [Confirm] Confirmando documento en SAP: ${jobId}`);
+        const token = await getDoxToken();
+
+        // Llamada a POST /document/jobs/{id}/confirm
+        const url = `${doxServiceUrl}/document-information-extraction/v1/document/jobs/${jobId}/confirm?clientId=${CLIENT_ID}`;
+        
+        const response = await axios.post(url, {}, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        console.log("-> [Confirm] Documento confirmado exitosamente.");
+        res.json(response.data); // Devuelve { status: "CONFIRMED", ... }
+
+    } catch (e) {
+        console.error("❌ Error en Confirm Document:", e.message);
+        if (e.response) console.error("Detalle SAP:", JSON.stringify(e.response.data));
+        res.status(500).json({ error: "Error al confirmar: " + e.message });
+    }
+});
+
 
 // 3. TRANSLATE (FLUJO CORREGIDO PARA FORZAR PDF AL FINAL)
 app.post('/translateFile', upload.single('file'), async (req, res) => {
@@ -235,6 +259,46 @@ app.post('/translateFile', upload.single('file'), async (req, res) => {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath); 
     }
 });
+
+app.post('/updateDocument', async (req, res) => {
+    try {
+        // Recibimos el ID y los datos estructurados (cabecera e items)
+        const { jobId, headerFields, lineItems } = req.body;
+        
+        if (!jobId) throw new Error("Falta el Job ID");
+
+        console.log(`-> [Update] Enviando correcciones a SAP para Job: ${jobId}`);
+        const token = await getDoxToken();
+
+        // Construimos el payload exacto que pide el Swagger de SAP
+        // Nota: lineItems debe ser un array de arrays (filas -> campos)
+        const payload = {
+            extraction: {
+                headerFields: headerFields || [],
+                lineItems: lineItems || [] 
+            }
+        };
+
+        const url = `${doxServiceUrl}/document-information-extraction/v1/document/jobs/${jobId}?clientId=${CLIENT_ID}`;
+        
+        // Llamada a POST /document/jobs/{id}
+        await axios.post(url, payload, {
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log("-> [Update] Datos guardados correctamente en SAP.");
+        res.json({ status: "success", message: "Ground truth updated" });
+
+    } catch (e) {
+        console.error("❌ Error en Update Document:", e.message);
+        if (e.response) console.error("Detalle SAP:", JSON.stringify(e.response.data));
+        res.status(500).json({ error: "Error al actualizar datos: " + e.message });
+    }
+});
+
 
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => console.log(`Backend ready: ${PORT}`));
