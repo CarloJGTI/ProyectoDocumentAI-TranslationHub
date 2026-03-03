@@ -7,7 +7,6 @@ applications:
     random-route: true           
     command: node srv/server.js  
     services:
-      - default_sap-document-information-extraction
     # -----------------------------------------------------------
     # VARIABLES DE ENTORNO
     # -----------------------------------------------------------
